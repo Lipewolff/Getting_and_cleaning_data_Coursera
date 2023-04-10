@@ -1,0 +1,90 @@
+###########################################
+### Library ###############################
+###########################################
+
+
+library(dplyr)
+library(tidyverse)
+
+###########################################
+### data capture ##########################
+###########################################
+
+X_train <- read.table("X_train.txt")
+y_train <- read.table("y_train.txt")
+sub_train <- read.table("subject_train.txt")
+
+X_test <- read.table("X_test.txt")
+y_test <- read.table("y_test.txt")
+sub_test <- read.table("subject_test.txt")
+
+features <- read.table("features.txt")
+
+nom_var <- paste(features$V1,features$V2, sep="_")
+
+# empty vectors to create a new columns in DF of y tables
+
+test_activity_labels <- c(1:2947)
+train_activity_labels <- c(1:7352)
+train_label <- rep("train",7352) 
+test_label <- rep("test", 2947)
+  
+# activities vector
+
+activity_labels <- c("WALKING", "WALKING_UPSTAIRS","WALKING_DOWNSTAIRS","SITTING",
+                     "STANDING", "LAYING")
+# vector to relate the name of the activity with a level in y tables
+levels <- c(1,2,3,4,5,6)
+
+# loop for identifiying the activity in the y table
+
+for (i in levels) {
+  y_test$act_labels[y_test$V1 == levels[i]] <- activity_labels[i]
+  y_test}
+
+for (i in levels) {
+  y_train$act_labels[y_train$V1 == levels[i]] <- activity_labels[i]
+  y_train}
+
+# add activities to "y" tables
+
+y_test <- mutate(y_test, test_activity_labels)
+y_train <- mutate(y_train, train_activity_labels)
+
+y_test_lab <- y_test$act_labels
+y_train_lab <- y_train$act_labels
+
+# join column with activities in "X" tables
+X_test <- cbind(X_test, y_test_lab, test_label, sub_test)
+X_train <- cbind(X_train, y_train_lab, train_label, sub_train)
+
+# naming variables
+colnames(X_test) <- nom_var
+colnames(X_train) <- nom_var
+
+colnames(X_test)[565] <- "descriptive_activity"
+colnames(X_test)[566] <- "set"
+colnames(X_test)[567] <- "subject"
+colnames(X_train)[564] <- "descriptive_activity"
+colnames(X_train)[565] <- "set"
+colnames(X_train)[566] <- "subject"
+
+
+
+# merge X datasets 
+
+complete_data <- bind_rows(X_train, X_test)
+complete_data <- tbl_df(complete_data)
+names(complete_data)
+
+UCI_msd <- complete_data %>% select(contains("mean"), contains("std"))
+UCI_msd <- tbl_df(UCI_msd)
+names(UCI_msd)
+
+write.table(UCI_msd,"mean_sd_UCI.txt", sep = " ", col.names = TRUE)
+write.table(complete_data,"complete_data.txt", sep = " ", col.names = TRUE)
+
+avg_table <- complete_data %>% group_by(descriptive_activity) %>% 
+                       group_by(subject) %>%
+                           summarise(range = 1:561)
+avg_table
